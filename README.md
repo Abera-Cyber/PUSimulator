@@ -1,83 +1,75 @@
-### 介绍
-PUSimulator是基于BVCSP实现的设备模拟器项目。  
-目的：
-* 开放源码用于供BVCSP使用者了解如何开发设备端。
-* 用于测试BVCSP功能。
-* 用于模拟设备测试平台性能。
+### Introduction
+PUSimulator is a device simulator project based on BVCSP.
+Purpose:
+* Open source code is used for BVCSP users to understand how to develop device-side.
+* Used to test BVCSP functions.
+* Used to simulate device test platform performance.
 
-### 目录说明
+### Directory Description
 ```
-bin     生成/调试 目录
-build   sln工程文件/编译临时文件 目录
-include BVCSP库相关头文件 目录
-lib     BVCSP库相关dll/lib 目录
-src     模拟器源码 目录
+bin Generate/debug directory
+build sln project file/compilation temporary file directory
+include BVCSP library related header file directory
+lib BVCSP library related dll/lib directory
+src simulator source code directory
 ```
-> 正常情况下，您只需根据情况修改src里的代码，不需要修改src中子目录里的代码，他们是对bvcsp接口的封装。
+> Normally, you only need to modify the code in src according to the situation, and do not need to modify the code in the subdirectory of src, which is the encapsulation of the bvcsp interface.
 
-### 编译说明
+### Compilation Instructions
 
-项目是Windows Visual Studio 2010项目，推荐使用Visual Studio 2010编译。  
-项目工程文件在build目录中。  
+The project is a Windows Visual Studio 2010 project, and it is recommended to use Visual Studio 2010 to compile.
+The project project files are in the build directory.
 
-### 运行
+### Run
 
-1. 修改bin目录下pusimulator.ini配置文件。重点：id（设备ID号）ip（上线服务器地址） port（上线服务器端口）
-2. 自动拷贝文件运行：直接双击bin目录下的run.bat运行。  
-3. 手动拷贝文件运行：将lib目录下的dll文件拷贝到bin目录下。 双击PUSimulator.exe 运行。
-> BVCSP库依赖msvcr100.dll，msvcp100.dll（没有vs2010开发环境，可以安装运行环境）。
-PUSimulator.exe 是开放源码的，具体依赖的运行环境，需要根据您的开发环境确定。 
-BVCSP是收费库，需要认证后，才能上线服务器。认证需要联系销售人员（需提供auth_code，见打印输出）。
+1. Modify the pusimulator.ini configuration file in the bin directory. Key points: id (device ID number) ip (online server address) port (online server port)
+2. Automatically copy the file to run: Double-click run.bat in the bin directory to run.
+3. Manually copy the file to run: Copy the dll file in the lib directory to the bin directory. Double-click PUSimulator.exe to run.
+> BVCSP library depends on msvcr100.dll and msvcp100.dll (if there is no vs2010 development environment, you can install the operating environment).
+PUSimulator.exe is open source, and the specific dependent operating environment needs to be determined according to your development environment.
+BVCSP is a paid library and requires authentication before it can be put on the server. For authentication, you need to contact the salesperson (auth_code must be provided, see the printout).
+### Development process
+1. Set the log callback interface.
+2. Initialize the library.
+3. Authentication.
+4. Implement virtual functions of related objects such as commands and channels.
+5. Set device information and channel objects.
+6. Go online to the server.
+7. Go offline.
+8. Release the library.
 
-### 开发流程
-1. 设置日志回调接口。
-2. 初始化库。
-3. 认证。
-4. 实现命令，通道等相关对象虚函数。
-5. 设置设备信息，通道对象。
-6. 上线服务器。 
-7. 下线。
-8. 释放库。
+### Initialize the library
+* If you use the library's internal thread, the caller does not need to call the BVCSP_HandleEvent interface.
+> Note that the library callback comes from the library's internal thread, and be careful to handle synchronization issues to prevent deadlock.
 
-### 初始化库
-* 使用库内部线程，则调用者不需要调用BVCSP_HandleEvent接口。
-> 注意库回调来自库内部线程，小心处理同步问题，防止死锁。
+* If you use the library's external thread, the caller needs to call the BVCSP_HandleEvent interface "in a fixed thread".
+> Note that you must wait until BVCSP_HandleEvent is called (the library determines that the working thread has started) before calling other interfaces, otherwise you will receive a reply of "-65532".
 
-* 使用库外部线程，则需要调用者“在一个固定的线程内“调用BVCSP_HandleEvent接口。
-> 注意 必须等BVCSP_HandleEvent被调用后（库内部确定工作线程已启动），才能调用其它接口，否则会收到回复”-65532“。
+### Authentication
+BVCSP is a paid library and requires authentication before going online to the server. You need to contact the salesperson for authentication (auth_code is required).
+The authentication-related code is in auth.cpp, and you need to make the following changes:
 
-### 认证
-BVCSP是收费库，需要认证后，才能上线服务器。认证需要联系销售人员（需提供auth_code）。  
-认证相关代码在 auth.cpp中，需要您做如下修改：
+* In the hardware information callback interface, fill in your real device hardware information.
+* In the Auth interface, fill in the developer key information you applied for (need to contact the sales staff for allocation).
+> The same hardware information will be considered as the same device, the authentication information is bound to the hardware information, and only one valid hardware information platform is allowed at the same time.
 
-* 硬件信息回调接口中，填写您的真实设备硬件信息。
-* Auth接口中，填写您申请的开发者密钥信息（需要联系销售人员分配）。
-> 相同的硬件信息会被认为是同一台设备，认证信息绑定硬件信息，同一个硬件信息平台同时只允许一个有效。
+### Set device information, channel object
+The device/channel information is set in loginout.cpp, and you need to make the following changes:
+* Modify config.cpp to implement the configuration save and read functions (the default is the .ini configuration file under Windows).
+* The login interface in loginout.cpp implements device/channel information registration!!!!
 
-### 设置设备信息，通道对象
-设备/通道信息设置在 loginout.cpp中，需要您做如下修改：
-* 修改config.cpp，实现配置保存和读取功能（默认为windows下.ini配置文件）。
-* loginout.cpp中login接口，实现设备/通道信息注册!!!!
+### Online/offline server
+It has been implemented in loginout.cpp and can be modified according to needs.
 
-### 上线/下线服务器
-loginout.cpp 中已经实现，可以根据需求修改。
+### GPS
+GPS related functions are implemented in gps.*. According to the comments, the virtual function interface of the relevant class is implemented, which can support the following functions.
+* GPS channel support.
+* Setting GPS channel name support.
+* Query GPS positioning data command support.
+* Query/set GPS configuration support.
 
-### GPS 
-GPS相关功能实现在gps.*中，根据注释实现相关类虚函数接口，即可以支持一下功能。
-* GPS通道支持。
-* 设置GPS通道名称支持。
-* 查询GPS定位数据命令支持。
-* 查询/设置 GPS 配置支持。
-
-### 串口（TSP）
-串口相关功能实现在tsp.*中，根据注释实现相关类虚函数接口，即可以支持一下功能。
-* 串口通道支持。
-* 设置串口通道名称支持。
-* 查询/设置 串口属性支持。
-
-### 音视频
-
-音视频相关功能实现在media.*中，根据注释实现相关类虚函数接口，即可以支持一下功能。
-* 音视频通道支持。能力上报；音视频数据（可变类型）采集、发送；
-* 设置音视频通道名称支持。
-* 云台控制支持。
+### Serial port (TSP)
+Serial port related functions are implemented in tsp.*. According to the comments, the virtual function interface of the relevant class is implemented, which can support the following functions.
+* Serial port channel support.
+* Setting serial port channel name support.
+* Query/set serial port attribute support.
